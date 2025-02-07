@@ -1,0 +1,17 @@
+import { Module } from "@nestjs/common";
+import { MikroOrmModule } from "@mikro-orm/nestjs";
+import { Ticketing } from "./entities/ticketing.entity";
+import { TicketingController } from "./ticketing.controller";
+import { TicketingService } from "./ticketing.service";
+import { Category } from "./entities/categoy.entity";
+import { SubCategory } from "./entities/subcategory.entity";
+import { Item } from "./entities/item.entity";
+import { User } from "src/user/entities/user.entity";
+import { Media } from "src/media/entities/media.entity";
+
+@Module({
+  imports: [MikroOrmModule.forFeature([Ticketing, Category, SubCategory, Item, User, Media])],
+  controllers: [TicketingController],
+  providers: [TicketingService],
+})
+export class TicketingModule {}
