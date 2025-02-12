@@ -7,7 +7,7 @@ import { Item } from "./item.entity";
 
 export enum TicketingType {
     Incident = 'Incident',
-    Sevice = 'Service'
+    Service = 'Service'
 }
 
 export enum PriorityEnum {
@@ -34,7 +34,13 @@ export class Ticketing {
     headApprovalAt: Date | null = null;
 
     @Property({ default: null })
-    itApprovalAt: Date | null = null;
+    itHeadApprovalAt: Date | null = null;
+
+    @Property({ default: null })
+    headRejectedAt: Date | null = null;
+
+    @Property({ default: null })
+    itHeadRejectedAt: Date | null = null;
 
     @Property({ default: null })
     reOpenedAt: Date | null = null;
@@ -59,6 +65,18 @@ export class Ticketing {
 
     @ManyToOne(() => User)
     approvedByHead: User | null = null;
+
+    @ManyToOne(() => User)
+    approvedByIt: User | null = null;
+
+    @ManyToOne(() => User)
+    approvedByItHead: User | null = null;
+
+    @Property({ columnType: 'text', nullable: true, default: null })
+    itReview: string | null;
+
+    @Property({ columnType: 'text', nullable: true, default: null })
+    headRemark: string | null;
 
     @OneToOne({ entity: () => Media, nullable: true })
     attachment: Media;

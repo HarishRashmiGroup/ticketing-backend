@@ -72,6 +72,8 @@ export class UserService {
             id: user.id,
             name: user.name,
             role: user.role,
+            contact: user.contact,
+            department: user.department,
             reportingTo: user.reportingTo ? user.reportingTo.name : '',
             email: user.email
         })

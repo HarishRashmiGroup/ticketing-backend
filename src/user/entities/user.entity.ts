@@ -3,7 +3,8 @@ import { Entity, Enum, ManyToMany, ManyToOne, PrimaryKey, Property, Unique } fro
 export enum UserRole {
     employee = 'employee',
     head = 'head',
-    admin = 'admin'
+    admin = 'admin',
+    it = 'it'
 };
 
 @Entity()
@@ -16,6 +17,12 @@ export class User {
 
     @Property()
     email: string;
+
+    @Property({ nullable: true, default: null })
+    contact: string | null;
+
+    @Property({ nullable: true, default: null })
+    department: string | null;
 
     @Property({ nullable: true })
     passkey: string;
