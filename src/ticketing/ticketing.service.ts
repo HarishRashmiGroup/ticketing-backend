@@ -128,6 +128,7 @@ export class TicketingService {
         year: "numeric"
       }),
       createdBy: ticket.createdBy.name,
+      createdById: ticket.createdBy.id,
       headApprovedAt: ticket.headApprovalAt,
       headRejectedAt: ticket.headRejectedAt,
       resolvedAt: ticket.resolvedAt,
@@ -158,6 +159,7 @@ export class TicketingService {
         year: "numeric"
       }),
       createdBy: ticket.createdBy.name,
+      createdById: ticket.createdBy.id,
       itHeadApprovedAt: ticket.itHeadApprovalAt,
       itHeadRejectedAt: ticket.itHeadRejectedAt,
       headRejectedAt: ticket.headRejectedAt,

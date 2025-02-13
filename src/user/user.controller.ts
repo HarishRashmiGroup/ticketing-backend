@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Post } from "@nestjs/common";
+import { Body, Controller, Get, Post, Query } from "@nestjs/common";
 import { UserRole } from "./entities/user.entity";
 import { Auth } from "../common/decorators/auth.decorator";
 import { NewUserDto } from "./dto/newUser.dto";
 import { UserService } from "./user.service";
 import { EmailDto, LoginDto } from "./dto/login.dto";
 import { User } from "src/common/decorators/user.decorator";
+import { CombineAccess } from "src/common/decorators/combine-access.decorator";
 
 @Controller('user')
 export class UserController {
@@ -24,5 +25,11 @@ export class UserController {
     @Get('basic')
     getBasicDetails(@User() id: string) {
         return this.userService.getBasicDetails(id);
+    }
+
+    @CombineAccess([UserRole.admin, UserRole.it])
+    @Get('info')
+    getUserInfo(@Query('id')id: string) {
+        return this.userService.getUserInfo(id);
     }
 }

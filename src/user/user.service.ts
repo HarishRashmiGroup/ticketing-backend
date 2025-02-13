@@ -79,4 +79,17 @@ export class UserService {
         })
     }
 
+    async getUserInfo(id: string) {
+        const user = await this.userRepository.findOneOrFail({ id }, { populate: ['reportingTo'] });
+        return ({
+            id: user.id,
+            name: user.name,
+            role: user.role,
+            contact: user.contact,
+            department: user.department,
+            reportingTo: user.reportingTo ? user.reportingTo.name : '',
+            email: user.email
+        })
+    }
+
 }
