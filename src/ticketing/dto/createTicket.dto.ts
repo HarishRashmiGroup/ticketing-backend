@@ -35,3 +35,19 @@ export class PageDto {
     @IsNumber()
     pageSize: number;
 }
+
+export class AddCategory {
+    @IsEnum(TicketingType)
+    type: TicketingType
+
+    @IsString()
+    name: string;
+}
+
+export class AddSubCategory {
+    @IsNumber()
+    id: number;
+
+    @IsString()
+    name: string;
+}

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { EntityRepository, FilterQuery } from "@mikro-orm/core";
 import { User, UserRole } from "src/user/entities/user.entity";
@@ -10,6 +10,7 @@ import { SubCategory } from "./entities/subcategory.entity";
 import { Item } from "./entities/item.entity";
 import { wrap } from "@mikro-orm/core";
 import { ActionEnum, ItApproveDto } from "./dto/itApprove.dto";
+import { AddCategory, AddSubCategory } from "./dto/createTicket.dto";
 
 
 @Injectable()
@@ -50,9 +51,10 @@ export class TicketingService {
 
     const ticket = new Ticketing({ query, type, priority, category: ticketCategory, subCategory: ticketSubCategory, item: ticketItem, createdBy: user, attachment });
     await this.em.persistAndFlush(ticket);
-    this.assignSequenceToTicket(ticket);
+    await this.assignSequenceToTicket(ticket);
     return ({
       message: 'Ticket Created successfully!',
+      ticketNo: ticket.serialNo,
       status: 201 as const,
     })
   }
@@ -77,6 +79,7 @@ export class TicketingService {
       attachmentId: ticket.attachment?.id,
       attachementName: ticket.attachment?.name,
       approvedByItHeadAt: ticket.itHeadApprovalAt,
+      rejectedByHeadAt: ticket.headRejectedAt,
       approvedByHeadAt: ticket.headApprovalAt,
       resolvedAt: ticket.resolvedAt,
       itHeadRemark: ticket.headRemark ?? "",
@@ -117,7 +120,7 @@ export class TicketingService {
     const options: FilterQuery<Ticketing> = {};
     options.createdBy = { reportingTo: user };
     options.type = TicketingType.Service;
-    const result = await this.ticketRepo.findAndCount(options, { populate: ['createdBy'], orderBy: { headApprovalAt: 'DESC NULLS FIRST', createdAt: 'DESC' }, limit: pageSize, offset: (pageNumber - 1) * pageSize });
+    const result = await this.ticketRepo.findAndCount(options, { populate: ['createdBy'], orderBy: { headApprovalAt: 'DESC NULLS FIRST', headRejectedAt: 'DESC NULLS FIRST', createdAt: 'DESC' }, limit: pageSize, offset: (pageNumber - 1) * pageSize });
     const lists = result[0].map((ticket) => ({
       id: ticket.id,
       sequenceNo: ticket.serialNo,
@@ -129,8 +132,8 @@ export class TicketingService {
       }),
       createdBy: ticket.createdBy.name,
       createdById: ticket.createdBy.id,
-      headApprovedAt: ticket.headApprovalAt,
       headRejectedAt: ticket.headRejectedAt,
+      headApprovedAt: ticket.headApprovalAt,
       resolvedAt: ticket.resolvedAt,
       type: ticket.type,
     }))
@@ -187,13 +190,13 @@ export class TicketingService {
     if (ticket.createdBy.reportingTo.id != user.id) {
       throw new BadRequestException('Not a valid request.');
     }
-    if (ticket.headApprovalAt || ticket.headRejectedAt) {
-      throw new BadRequestException("Bad request.")
-    }
+    // if (ticket.headApprovalAt || ticket.headRejectedAt) {
+    //   throw new BadRequestException("Bad request.")
+    // }
     if (action === ActionEnum.Approved)
-      wrap(ticket).assign({ query, approvedByHead: this.em.getReference(User, headId), headApprovalAt: new Date() });
+      wrap(ticket).assign({ query, approvedByHead: this.em.getReference(User, headId), headRejectedAt: null, headApprovalAt: new Date() });
     else
-      wrap(ticket).assign({ headRejectedAt: new Date() })
+      wrap(ticket).assign({ headRejectedAt: new Date(), headApprovalAt: null })
     await this.em.flush();
     return ({
       message: action,
@@ -202,16 +205,18 @@ export class TicketingService {
   }
 
   async apporvedByIt(dto: ItApproveDto, id: number, userId: string) {
-    const [ticket, category, subCategory, item] = await Promise.all([
+    const [ticket, category, subCategory, item, user] = await Promise.all([
       this.ticketRepo.findOneOrFail({ id }),
       this.em.findOneOrFail(Category, { name: dto.category, type: dto.type }),
       this.em.findOneOrFail(SubCategory, { name: dto.subCategory, category: { name: dto.category } }, { populate: ['category'] }),
       this.em.findOneOrFail(Item, { name: dto.item, subCategory: { name: dto.subCategory } }, { populate: ['subCategory'] }),
+      this.em.findOneOrFail(User, { id: userId })
     ]);
+    if (user.role != UserRole.admin) throw new ForbiddenException('');
     if (dto.action === ActionEnum.Approved)
-      wrap(ticket).assign({ category, subCategory, item, query: dto.query, itHeadApprovalAt: new Date(), headRemark: dto.remark });
+      wrap(ticket).assign({ category, subCategory, item, query: dto.query, itHeadApprovalAt: new Date(), itHeadRejectedAt: null, headRemark: dto.remark });
     else
-      wrap(ticket).assign({ category, subCategory, item, query: dto.query, itHeadRejectedAt: new Date() })
+      wrap(ticket).assign({ category, subCategory, item, query: dto.query, itHeadApprovalAt: null, itHeadRejectedAt: new Date() })
     await this.em.flush()
     return ({
       message: "Approved",
@@ -277,6 +282,63 @@ export class TicketingService {
       closeService: closeService,
       openService: openService,
       closeIncident: closeIncident
+    })
+  }
+
+  async categoryFor(type: TicketingType) {
+    const categories = await this.em.find(Category, { type: type });
+    return categories.map((c) => ({
+      id: c.id,
+      label: c.name,
+    }));
+  }
+
+  async addCategory(dto: AddCategory) {
+    const exist = await this.em.findOne(Category, { type: dto.type, name: dto.name });
+    if (exist) throw new BadRequestException('Category already exist.');
+    const category = new Category({ type: dto.type, name: dto.name });
+    await this.em.persistAndFlush(category);
+    return ({
+      id: category.id,
+      label: category.name
+    })
+  }
+
+  async subCategoryFor(id: number) {
+    const subCategories = await this.em.find(SubCategory, { category: id });
+    return subCategories.map((c) => ({
+      id: c.id,
+      label: c.name,
+    }));
+  }
+
+  async addSubCategory(dto: AddSubCategory) {
+    const exist = await this.em.findOne(SubCategory, { category: dto.id, name: dto.name });
+    if (exist) throw new BadRequestException("SubCategory already exist.");
+    const subCategory = new SubCategory({ category: this.em.getReference(Category, dto.id), name: dto.name });
+    await this.em.persistAndFlush(subCategory);
+    return ({
+      id: subCategory.id,
+      label: subCategory.name
+    })
+  }
+
+  async itemsFor(id: number) {
+    const items = await this.em.find(Item, { subCategory: id });
+    return items.map((c) => ({
+      id: c.id,
+      label: c.name,
+    }));
+  }
+
+  async addItem(dto: AddSubCategory) {
+    const exist = await this.em.findOne(Item, { subCategory: { id: dto.id }, name: dto.name });
+    if (exist) throw new BadRequestException("Item already exist.");
+    const item = new Item({ subCategory: this.em.getReference(SubCategory, dto.id), name: dto.name });
+    await this.em.persistAndFlush(item);
+    return ({
+      id: item.id,
+      label: item.name
     })
   }
 }

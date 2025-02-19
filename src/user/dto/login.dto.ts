@@ -10,6 +10,14 @@ export class LoginDto {
     passkey: string;
 }
 
+export class PasswordDto {
+    @IsString()
+    email: string;
+
+    @IsString()
+    passkey: string;
+}
+
 export class EmailDto {
     @IsEmail()
     @Transform(({ value }: { value: string }) => value.toLocaleLowerCase())

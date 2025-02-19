@@ -27,6 +27,12 @@ export class User {
     @Property({ nullable: true })
     passkey: string;
 
+    @Property({ nullable: true })
+    password: string;
+
+    @Property({ nullable: true })
+    otp: string;
+
     @ManyToOne({ default: null })
     reportingTo: User | null;
 
@@ -38,11 +44,14 @@ export class User {
 
     @Property({ default: null, onUpdate: () => { new Date() } })
     updatedAt: Date | null = null;
-    constructor({ id, name, role, reportingTo }: { id: string, name: string, role: UserRole, reportingTo: User | null }) {
+    constructor({ id, email, name, contact, role, department, reportingTo, passkey }: { id: string, email: string, contact: string, department: string, name: string, role: UserRole, reportingTo: User | null, passkey: string | null }) {
         this.id = id;
         this.name = name;
-        this.email = '';
+        this.contact = contact;
+        this.department = department;
+        this.email = email;
         this.reportingTo = reportingTo;
         this.role = role;
+        this.passkey = passkey;
     }
 }

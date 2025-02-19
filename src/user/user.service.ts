@@ -7,6 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import { otpTemplate } from "../email/email.template";
 import { randomInt } from "crypto";
 import { EmailService } from "src/email/email.service";
+import { BulkUsersDto, UserDto } from "./dto/bulkUsers.dto";
 
 const saltRounds = 10;
 @Injectable()
@@ -38,7 +39,7 @@ export class UserService {
         const user = await this.userRepository.findOneOrFail({ email })
         const otp = this.generateOtp();
         const hashedPassword = await bcrypt.hash(otp.toString(), saltRounds);
-        wrap(user).assign({ passkey: hashedPassword });
+        wrap(user).assign({ otp: hashedPassword });
         this.emailService.sendEmail(user.email, 'Login OTP For IT Portal', otpTemplate(otp));
         await this.em.flush();
         return { message: 'otp sent successfully.', status: 200 };
@@ -46,6 +47,30 @@ export class UserService {
 
     async login({ email, passkey }: { email: string, passkey: string }) {
         const user = await this.userRepository.findOneOrFail({ email });
+
+        const isPasswordValid = await bcrypt.compare(passkey, user.otp);
+
+        if (!isPasswordValid) {
+            throw new Error('Invalid credentials');
+        }
+        const payload = {
+            id: user.id,
+            name: user.name,
+            role: user.role,
+        };
+        const token = this.jwtService.sign(payload);
+        wrap(user).assign({ otp: null });
+        this.em.flush();
+        return {
+            message: 'Login successful',
+            status: 200 as const,
+            token,
+        };
+    }
+
+    async loginWithPass({ email, passkey }: { email: string, passkey: string }) {
+        //email is  Rml id in dto
+        const user = await this.userRepository.findOneOrFail({ id: email });
 
         const isPasswordValid = await bcrypt.compare(passkey, user.passkey);
 
@@ -90,6 +115,24 @@ export class UserService {
             reportingTo: user.reportingTo ? user.reportingTo.name : '',
             email: user.email
         })
+    }
+
+    async uploadBulkUsers(dto: UserDto[]) {
+        const users = dto?.map(async (user) => new User({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            contact: user.contact,
+            department: user.department,
+            passkey: user.passkey ? await bcrypt.hash(user.passkey.toString(), saltRounds) : null,
+            reportingTo: user.reportingTo ? this.em.getReference(User, user.reportingTo) : null
+        }));
+        await this.em.persistAndFlush(users);
+        return ({
+            message: 'user created successfully.',
+            status: 201 as const
+        });
     }
 
 }

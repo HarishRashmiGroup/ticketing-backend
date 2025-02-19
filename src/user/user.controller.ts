@@ -3,9 +3,10 @@ import { UserRole } from "./entities/user.entity";
 import { Auth } from "../common/decorators/auth.decorator";
 import { NewUserDto } from "./dto/newUser.dto";
 import { UserService } from "./user.service";
-import { EmailDto, LoginDto } from "./dto/login.dto";
+import { EmailDto, LoginDto, PasswordDto } from "./dto/login.dto";
 import { User } from "src/common/decorators/user.decorator";
 import { CombineAccess } from "src/common/decorators/combine-access.decorator";
+import { BulkUsersDto } from "./dto/bulkUsers.dto";
 
 @Controller('user')
 export class UserController {
@@ -21,6 +22,11 @@ export class UserController {
         return this.userService.login(dto);
     }
 
+    @Post('verify-pass')
+    loginUserWithPass(@Body() dto: PasswordDto) {
+        return this.userService.loginWithPass(dto);
+    }
+
     @Auth()
     @Get('basic')
     getBasicDetails(@User() id: string) {
@@ -29,7 +35,13 @@ export class UserController {
 
     @CombineAccess([UserRole.admin, UserRole.it])
     @Get('info')
-    getUserInfo(@Query('id')id: string) {
+    getUserInfo(@Query('id') id: string) {
         return this.userService.getUserInfo(id);
+    }
+
+    @CombineAccess([UserRole.admin, UserRole.it])
+    @Post('bulk-user')
+    uploadBulkUsers(@Body() dto: BulkUsersDto) {
+        return this.userService.uploadBulkUsers(dto.data);
     }
 }

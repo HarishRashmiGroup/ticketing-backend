@@ -10,7 +10,6 @@ export class JwtMiddleware implements NestMiddleware {
         try {
             if (token) {
                 const decoded: string | jwt.JwtPayload = jwt.verify(token, jwtConstants.secret);
-                console.log(decoded)
                 req.headers.id = typeof decoded === 'string'  ? decoded : decoded.id;
             }
             next();
