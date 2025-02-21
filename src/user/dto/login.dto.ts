@@ -23,3 +23,8 @@ export class EmailDto {
     @Transform(({ value }: { value: string }) => value.toLocaleLowerCase())
     email: string;
 }
+
+export class ResetPassword {
+    @IsString()
+    id: string;
+}

@@ -3,7 +3,7 @@ import { UserRole } from "./entities/user.entity";
 import { Auth } from "../common/decorators/auth.decorator";
 import { NewUserDto } from "./dto/newUser.dto";
 import { UserService } from "./user.service";
-import { EmailDto, LoginDto, PasswordDto } from "./dto/login.dto";
+import { EmailDto, LoginDto, PasswordDto, ResetPassword } from "./dto/login.dto";
 import { User } from "src/common/decorators/user.decorator";
 import { CombineAccess } from "src/common/decorators/combine-access.decorator";
 import { BulkUsersDto } from "./dto/bulkUsers.dto";
@@ -31,6 +31,18 @@ export class UserController {
     @Get('basic')
     getBasicDetails(@User() id: string) {
         return this.userService.getBasicDetails(id);
+    }
+
+    @Auth()
+    @Post('change-password')
+    changePassword(@User() id: string, @Body() dto: { password: string }) {
+        return this.userService.changePassword(id, dto.password);
+    }
+
+    @CombineAccess([UserRole.it, UserRole.admin])
+    @Post('reset-password')
+    resetPassword(@Body() dto: ResetPassword) {
+        return this.userService.resetPassword(dto.id);
     }
 
     @CombineAccess([UserRole.admin, UserRole.it])

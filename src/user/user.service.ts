@@ -1,5 +1,5 @@
 import { InjectRepository } from "@mikro-orm/nestjs";
-import { HttpCode, Injectable } from "@nestjs/common";
+import { BadRequestException, HttpCode, Injectable } from "@nestjs/common";
 import { User, UserRole } from "./entities/user.entity";
 import { EntityManager, EntityRepository, wrap } from "@mikro-orm/postgresql";
 import * as bcrypt from 'bcrypt';
@@ -114,6 +114,34 @@ export class UserService {
             department: user.department,
             reportingTo: user.reportingTo ? user.reportingTo.name : '',
             email: user.email
+        })
+    }
+
+    async changePassword(id: string, password: string) {
+        if (!password.toString().trim()) throw new BadRequestException("password not received.");
+        const user = await this.userRepository.findOneOrFail(id);
+        const hash = await bcrypt.hash(password.toString().trim(), saltRounds);
+        wrap(user).assign({ passkey: hash });
+        await this.em.flush();
+        return ({
+            message: 'Password changed successfully.',
+            status: 200 as const,
+
+        })
+    }
+
+    async resetPassword(id: string) {
+        const user = await this.userRepository.findOneOrFail(id);
+        if (user.role != UserRole.employee) {
+            throw new BadRequestException("Password can not be changed.")
+        }
+        const hash = await bcrypt.hash(user.id.toString().trim(), saltRounds);
+        wrap(user).assign({ passkey: hash });
+        await this.em.flush();
+        return ({
+            message: 'Password changed successfully.',
+            status: 200 as const,
+
         })
     }
 

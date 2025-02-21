@@ -15,7 +15,7 @@ export class User {
     @Property()
     name: string;
 
-    @Property()
+    @Property({ nullable: true })
     email: string;
 
     @Property({ nullable: true, default: null })
@@ -44,7 +44,7 @@ export class User {
 
     @Property({ default: null, onUpdate: () => { new Date() } })
     updatedAt: Date | null = null;
-    constructor({ id, email, name, contact, role, department, reportingTo, passkey }: { id: string, email: string, contact: string, department: string, name: string, role: UserRole, reportingTo: User | null, passkey: string | null }) {
+    constructor({ id, email, name, contact, role, department, reportingTo, passkey }: { id: string, email: string | null, contact: string, department: string, name: string, role: UserRole, reportingTo: User | null, passkey: string | null }) {
         this.id = id;
         this.name = name;
         this.contact = contact;

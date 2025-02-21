@@ -1,6 +1,7 @@
 import { Transform, Type } from "class-transformer";
 import { IsEnum, IsOptional, IsString, Validate, ValidateNested } from "class-validator";
 import { UserRole } from "../entities/user.entity";
+import { Optional } from "@nestjs/common";
 
 export class UserDto {
     @IsString()
@@ -20,9 +21,10 @@ export class UserDto {
     @IsString()
     passkey: string;
 
+    @Optional()
     @Transform(({ value }) => value.toLowerCase().trim())
     @IsString()
-    email: string;
+    email: string | null;
 
     @IsString()
     contact: string;
