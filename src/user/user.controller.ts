@@ -1,10 +1,9 @@
 import { Body, Controller, Get, Post, Query } from "@nestjs/common";
-import { UserRole } from "./entities/user.entity";
+import { User as UserEntity, UserRole } from "./entities/user.entity";
 import { Auth } from "../common/decorators/auth.decorator";
-import { NewUserDto } from "./dto/newUser.dto";
 import { UserService } from "./user.service";
 import { EmailDto, LoginDto, PasswordDto, ResetPassword } from "./dto/login.dto";
-import { User } from "src/common/decorators/user.decorator";
+import { GetUserFromToken, User } from "src/common/decorators/user.decorator";
 import { CombineAccess } from "src/common/decorators/combine-access.decorator";
 import { BulkUsersDto } from "./dto/bulkUsers.dto";
 
@@ -41,8 +40,8 @@ export class UserController {
 
     @CombineAccess([UserRole.it, UserRole.admin])
     @Post('reset-password')
-    resetPassword(@Body() dto: ResetPassword) {
-        return this.userService.resetPassword(dto.id);
+    resetPassword(@Body() dto: ResetPassword, @GetUserFromToken() user: UserEntity) {
+        return this.userService.resetPassword(dto.id, user);
     }
 
     @CombineAccess([UserRole.admin, UserRole.it])

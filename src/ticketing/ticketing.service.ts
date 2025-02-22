@@ -23,17 +23,19 @@ export class TicketingService {
   ) { }
 
   async assignSequenceToTicket(ticket: Ticketing) {
-    const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const lastDay = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(),now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
     const count = await this.ticketRepo.count({
-      id: { $lte: ticket.id }, createdAt: {
+      id: { $lt: ticket.id }, createdAt: {
         $gte: firstDay,
         $lte: lastDay
-      }
+      },
+      type: ticket.type
     });
     const month = ('0' + String(new Date().getMonth() + 1)).slice(-2)
     const year = ('0' + String(new Date().getFullYear())).slice(-2);
-    const sequnce = String(Number(count) + 1).padStart(4, '0');
+    const sequnce = String(Number(count)).padStart(4, '0');
     const prefix = ticket.type == TicketingType.Incident ? "INC" : "SRQ";
     const sequenceId = `${prefix}${month}${year}${sequnce}`;
     wrap(ticket).assign({ serialNo: sequenceId });
@@ -231,6 +233,9 @@ export class TicketingService {
       this.em.findOneOrFail(SubCategory, { name: dto.subCategory, category: { name: dto.category } }, { populate: ['category'] }),
       this.em.findOneOrFail(Item, { name: dto.item, subCategory: { name: dto.subCategory } }, { populate: ['subCategory'] }),
     ]);
+    if (ticket.approvedByIt) {
+      throw new BadRequestException("Ticket already Resolved.")
+    }
     wrap(ticket).assign({ category, subCategory, item, query: dto.query, resolvedAt: new Date(), approvedByIt: this.em.getReference(User, userId), itReview: dto.remark });
     await this.em.flush()
     return ({
@@ -286,7 +291,7 @@ export class TicketingService {
   }
 
   async categoryFor(type: TicketingType) {
-    const categories = await this.em.find(Category, { type: type });
+    const categories = await this.em.find(Category, { type: type }, { orderBy: { name: 'ASC' } });
     return categories.map((c) => ({
       id: c.id,
       label: c.name,
@@ -305,7 +310,7 @@ export class TicketingService {
   }
 
   async subCategoryFor(id: number) {
-    const subCategories = await this.em.find(SubCategory, { category: id });
+    const subCategories = await this.em.find(SubCategory, { category: id }, { orderBy: { name: 'ASC' } });
     return subCategories.map((c) => ({
       id: c.id,
       label: c.name,
@@ -324,7 +329,7 @@ export class TicketingService {
   }
 
   async itemsFor(id: number) {
-    const items = await this.em.find(Item, { subCategory: id });
+    const items = await this.em.find(Item, { subCategory: id }, { orderBy: { name: 'ASC' } });
     return items.map((c) => ({
       id: c.id,
       label: c.name,

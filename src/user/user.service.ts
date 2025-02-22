@@ -130,9 +130,9 @@ export class UserService {
         })
     }
 
-    async resetPassword(id: string) {
+    async resetPassword(id: string, reqUser: User) {
         const user = await this.userRepository.findOneOrFail(id);
-        if (user.role != UserRole.employee) {
+        if (user.role === UserRole.admin && reqUser.role !== UserRole.admin) {
             throw new BadRequestException("Password can not be changed.")
         }
         const hash = await bcrypt.hash(user.id.toString().trim(), saltRounds);
@@ -146,17 +146,21 @@ export class UserService {
     }
 
     async uploadBulkUsers(dto: UserDto[]) {
-        const users = dto?.map(async (user) => new User({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            contact: user.contact,
-            department: user.department,
-            passkey: user.passkey ? await bcrypt.hash(user.passkey.toString(), saltRounds) : null,
-            reportingTo: user.reportingTo ? this.em.getReference(User, user.reportingTo) : null
-        }));
-        await this.em.persistAndFlush(users);
+        for (const user of dto || []) {
+            const hashedPasskey = await bcrypt.hash(user.passkey?.toString() || user.id.toString(), saltRounds);
+            const newUser = new User({
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role === UserRole.admin ? UserRole.employee : user.role,
+                contact: user.contact,
+                department: user.department,
+                passkey: hashedPasskey,
+                reportingTo: user.reportingTo ? this.em.getReference(User, user.reportingTo) : null
+            });
+            this.em.persist(newUser);
+        }
+        await this.em.flush();
         return ({
             message: 'user created successfully.',
             status: 201 as const
