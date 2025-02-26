@@ -112,6 +112,7 @@ export class UserService {
             role: user.role,
             contact: user.contact,
             department: user.department,
+            reportingToId: user.reportingTo ? user.reportingTo.id : '',
             reportingTo: user.reportingTo ? user.reportingTo.name : '',
             email: user.email
         })
@@ -165,6 +166,36 @@ export class UserService {
             message: 'user created successfully.',
             status: 201 as const
         });
+    }
+
+    async editUser(dto: UserDto) {
+        const user = await this.userRepository.findOneOrFail({ id: dto.id });
+        wrap(user).assign({
+            name: dto.name,
+            email: dto.email,
+            department: dto.department,
+            reportingTo: dto.reportingTo ? this.em.getReference(User, dto.reportingTo) : user.reportingTo,
+            contact: dto.contact,
+            role: dto.role === UserRole.admin ? user.role : dto.role
+        })
+        await this.em.flush();
+        return ({
+            message: 'User data updated.',
+            status: 204 as const
+        })
+    }
+
+    async deleteUser(id: string) {
+        const user = await this.userRepository.findOneOrFail({ id });
+        try {
+            this.em.removeAndFlush(user);
+        } catch {
+            throw new BadRequestException('User can not be deleted.');
+        }
+        return ({
+            message: 'User deleted successfully.',
+            status: 200 as const
+        })
     }
 
 }
