@@ -10,7 +10,7 @@ import { SubCategory } from "./entities/subcategory.entity";
 import { Item } from "./entities/item.entity";
 import { wrap } from "@mikro-orm/core";
 import { ActionEnum, ItApproveDto } from "./dto/itApprove.dto";
-import { AddCategory, AddSubCategory } from "./dto/createTicket.dto";
+import { AddCategory, AddSubCategory, TicketFilterDto, TicketStatusEnum } from "./dto/createTicket.dto";
 
 
 @Injectable()
@@ -24,7 +24,7 @@ export class TicketingService {
 
   async assignSequenceToTicket(ticket: Ticketing) {
     const now = new Date();
-    const firstDay = new Date(now.getFullYear(),now.getMonth(), 1);
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
     const count = await this.ticketRepo.count({
       id: { $lt: ticket.id }, createdAt: {
@@ -146,9 +146,27 @@ export class TicketingService {
     })
   }
 
-  async getItTickets(pageNumber: number, pageSize: number) {
+  async getItTickets(dto: TicketFilterDto) {
+    const pageSize = dto.pageSize;
+    const pageNumber = dto.pageNumber;
+    const options: FilterQuery<Ticketing> = {}
+    if (dto.date) {
+      const startOfDay = new Date(dto.date);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(dto.date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      options.createdAt = { $gte: startOfDay, $lte: endOfDay };
+    }
+    if (dto.type) {
+      options.type = dto.type;
+    }
+    if (dto.status) {
+      options.approvedByIt = dto.status === TicketStatusEnum.open ? { $eq: null } : { $ne: null };
+    }
     const result = await this.ticketRepo.findAndCount(
-      {}, {
+      options, {
       populate: ['createdBy', 'approvedByIt'],
       orderBy: { resolvedAt: 'DESC NULLS FIRST', createdAt: 'DESC' },
       limit: pageSize,

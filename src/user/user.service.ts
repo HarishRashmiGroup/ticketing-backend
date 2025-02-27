@@ -1,5 +1,5 @@
 import { InjectRepository } from "@mikro-orm/nestjs";
-import { BadRequestException, HttpCode, Injectable } from "@nestjs/common";
+import { BadRequestException, HttpCode, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { User, UserRole } from "./entities/user.entity";
 import { EntityManager, EntityRepository, wrap } from "@mikro-orm/postgresql";
 import * as bcrypt from 'bcrypt';
@@ -23,7 +23,7 @@ export class UserService {
         private readonly em: EntityManager,
     ) { }
     async getUserById(id: string) {
-        const user = await this.userRepository.findOneOrFail({ id });
+        const user = await this.userRepository.findOneOrFail({ id: id.replace(/[a-z]/g, c => c.toUpperCase()) });
         return ({
             id: user.id,
             name: user.name,
@@ -70,7 +70,7 @@ export class UserService {
 
     async loginWithPass({ email, passkey }: { email: string, passkey: string }) {
         //email is  Rml id in dto
-        const user = await this.userRepository.findOneOrFail({ id: email });
+        const user = await this.userRepository.findOneOrFail({ id: email.replace(/[a-z]/g, c => c.toUpperCase()) });
 
         const isPasswordValid = await bcrypt.compare(passkey, user.passkey);
 
@@ -92,7 +92,7 @@ export class UserService {
     }
 
     async getBasicDetails(id: string) {
-        const user = await this.userRepository.findOneOrFail({ id }, { populate: ['reportingTo'] });
+        const user = await this.userRepository.findOneOrFail({ id: id.replace(/[a-z]/g, c => c.toUpperCase()) }, { populate: ['reportingTo'] });
         return ({
             id: user.id,
             name: user.name,
@@ -105,7 +105,7 @@ export class UserService {
     }
 
     async getUserInfo(id: string) {
-        const user = await this.userRepository.findOneOrFail({ id }, { populate: ['reportingTo'] });
+        const user = await this.userRepository.findOneOrFail({ id: id.replace(/[a-z]/g, c => c.toUpperCase()) }, { populate: ['reportingTo'] });
         return ({
             id: user.id,
             name: user.name,
@@ -120,7 +120,7 @@ export class UserService {
 
     async changePassword(id: string, password: string) {
         if (!password.toString().trim()) throw new BadRequestException("password not received.");
-        const user = await this.userRepository.findOneOrFail(id);
+        const user = await this.userRepository.findOneOrFail(id.replace(/[a-z]/g, c => c.toUpperCase()));
         const hash = await bcrypt.hash(password.toString().trim(), saltRounds);
         wrap(user).assign({ passkey: hash });
         await this.em.flush();
@@ -132,7 +132,7 @@ export class UserService {
     }
 
     async resetPassword(id: string, reqUser: User) {
-        const user = await this.userRepository.findOneOrFail(id);
+        const user = await this.userRepository.findOneOrFail(id.replace(/[a-z]/g, c => c.toUpperCase()));
         if (user.role === UserRole.admin && reqUser.role !== UserRole.admin) {
             throw new BadRequestException("Password can not be changed.")
         }
@@ -148,7 +148,7 @@ export class UserService {
 
     async uploadBulkUsers(dto: UserDto[]) {
         for (const user of dto || []) {
-            const hashedPasskey = await bcrypt.hash(user.passkey?.toString() || user.id.toString(), saltRounds);
+            const hashedPasskey = await bcrypt.hash(user.passkey?.toString() || user.id.replace(/[a-z]/g, c => c.toUpperCase()).toString(), saltRounds);
             const newUser = new User({
                 id: user.id,
                 name: user.name,
@@ -157,7 +157,7 @@ export class UserService {
                 contact: user.contact,
                 department: user.department,
                 passkey: hashedPasskey,
-                reportingTo: user.reportingTo ? this.em.getReference(User, user.reportingTo) : null
+                reportingTo: user.reportingTo ? this.em.getReference(User, user.reportingTo.replace(/[a-z]/g, c => c.toUpperCase())) : null
             });
             this.em.persist(newUser);
         }
@@ -169,12 +169,12 @@ export class UserService {
     }
 
     async editUser(dto: UserDto) {
-        const user = await this.userRepository.findOneOrFail({ id: dto.id });
+        const user = await this.userRepository.findOneOrFail({ id: dto.id.replace(/[a-z]/g, c => c.toUpperCase()) });
         wrap(user).assign({
             name: dto.name,
             email: dto.email,
             department: dto.department,
-            reportingTo: dto.reportingTo ? this.em.getReference(User, dto.reportingTo) : user.reportingTo,
+            reportingTo: dto.reportingTo ? this.em.getReference(User, dto.reportingTo.replace(/[a-z]/g, c => c.toUpperCase())) : user.reportingTo,
             contact: dto.contact,
             role: dto.role === UserRole.admin ? user.role : dto.role
         })
@@ -186,16 +186,20 @@ export class UserService {
     }
 
     async deleteUser(id: string) {
-        const user = await this.userRepository.findOneOrFail({ id });
+        const user = await this.userRepository.findOneOrFail({ id: id.replace(/[a-z]/g, c => c.toUpperCase()) });
         try {
-            this.em.removeAndFlush(user);
-        } catch {
-            throw new BadRequestException('User can not be deleted.');
+            await this.em.removeAndFlush(user);
+        } catch (error) {
+            if (error.code === '23503') {
+                throw new BadRequestException('User cannot be deleted because he has raised tickets.');
+            }
+            throw new InternalServerErrorException('An unexpected error occurred.');
         }
-        return ({
+
+        return {
             message: 'User deleted successfully.',
-            status: 200 as const
-        })
+            status: 200 as const,
+        };
     }
 
 }

@@ -1,4 +1,4 @@
-import { IsEnum, IsNumber, IsOptional, IsString } from "class-validator";
+import { IsDate, IsEnum, IsNumber, IsOptional, IsString } from "class-validator";
 import { PriorityEnum, TicketingType } from "../entities/ticketing.entity";
 import { Transform } from "class-transformer";
 
@@ -27,6 +27,34 @@ export class CreateTicketDto {
 }
 
 export class PageDto {
+    @Transform(({ value }) => (Number(value)))
+    @IsNumber()
+    pageNumber: number;
+
+    @Transform(({ value }) => (Number(value)))
+    @IsNumber()
+    pageSize: number;
+}
+
+export enum TicketStatusEnum {
+    open = "open",
+    close = "close"
+}
+
+export class TicketFilterDto {
+    @IsOptional()
+    @IsEnum(TicketStatusEnum)
+    status: TicketStatusEnum;
+
+    @IsOptional()
+    @Transform(({ value }) => new Date(value))
+    @IsDate()
+    date: Date;
+
+    @IsOptional()
+    @IsEnum(TicketingType)
+    type: TicketingType;
+
     @Transform(({ value }) => (Number(value)))
     @IsNumber()
     pageNumber: number;
