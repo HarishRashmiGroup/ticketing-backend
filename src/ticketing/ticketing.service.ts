@@ -279,7 +279,7 @@ export class TicketingService {
 
       options.createdAt = { $gte: startOfDay, $lte: endOfDay };
     } else {
-      options.createdAt = { $lte: monthend }, { $gt: monthstart }
+      options.createdAt = { $lte: monthend, $gt: monthstart }
     }
     if (dto.it) {
       options.approvedByIt = dto.it;
