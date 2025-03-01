@@ -7,14 +7,12 @@ import { UserModule } from './user/user.module';
 import { JwtMiddleware } from './common/jwtMiddleware';
 import { MediaModule } from './media/media.module';
 import { TicketingModule } from './ticketing/ticketing.module';
-import { CommentModule } from './comment/comment.module';
 
 @Module({
   imports: [
     MikroOrmModule.forRoot(mikroOrmConfig),
     UserModule,
     MediaModule,
-    CommentModule,
     TicketingModule
   ],
   controllers: [AppController],

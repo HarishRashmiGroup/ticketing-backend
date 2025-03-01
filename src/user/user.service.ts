@@ -202,4 +202,13 @@ export class UserService {
         };
     }
 
+    async getITUsers() {
+        const iTUsers = await this.userRepository.find({ role: UserRole.it });
+        if (iTUsers.length == 0) return [];
+        return iTUsers.map((u) => ({
+            id: u.id,
+            label: u.name
+        }));
+    }
+
 }

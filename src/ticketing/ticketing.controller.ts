@@ -8,7 +8,7 @@ import {
   Query,
 } from "@nestjs/common";
 import { TicketingService } from "./ticketing.service";
-import { AddCategory, AddSubCategory, CreateTicketDto, PageDto, TicketFilterDto } from "./dto/createTicket.dto";
+import { AddCategory, AddSubCategory, CreateTicketDto, FilteredDashboardDto, PageDto, TicketFilterDto } from "./dto/createTicket.dto";
 import { User } from "src/common/decorators/user.decorator";
 import { Auth } from "src/common/decorators/auth.decorator";
 import { CombineAccess } from "src/common/decorators/combine-access.decorator";
@@ -54,10 +54,10 @@ export class TicketingController {
     return this.ticketService.getApprovalTickets(id, pageDto.pageNumber, pageDto.pageSize);
   }
 
-  @CombineAccess([UserRole.admin])
+  @CombineAccess([UserRole.admin, UserRole.it])
   @Get('dashboard')
-  async getDashboard() {
-    return this.ticketService.getDashboard();
+  async getDashboard(@Query()dto: FilteredDashboardDto) {
+    return this.ticketService.getDashboard(dto);
   }
 
   @Auth()

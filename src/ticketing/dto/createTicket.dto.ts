@@ -55,6 +55,10 @@ export class TicketFilterDto {
     @IsEnum(TicketingType)
     type: TicketingType;
 
+    @IsOptional()
+    @IsString()
+    it: string;
+
     @Transform(({ value }) => (Number(value)))
     @IsNumber()
     pageNumber: number;
@@ -78,4 +82,16 @@ export class AddSubCategory {
 
     @IsString()
     name: string;
+}
+
+export class FilteredDashboardDto {
+
+    @IsOptional()
+    @Transform(({ value }) => new Date(value))
+    @IsDate()
+    date: Date;
+
+    @IsOptional()
+    @IsString()
+    it: string;
 }

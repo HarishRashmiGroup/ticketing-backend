@@ -67,4 +67,10 @@ export class UserController {
     deleteUser(@Param('id') id: string) {
         return this.userService.deleteUser(id);
     }
+
+    @CombineAccess([UserRole.admin, UserRole.it])
+    @Get('/it-users')
+    getITPersons() {
+        return this.userService.getITUsers();
+    }
 }

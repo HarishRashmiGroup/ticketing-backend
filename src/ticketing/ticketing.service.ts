@@ -10,7 +10,7 @@ import { SubCategory } from "./entities/subcategory.entity";
 import { Item } from "./entities/item.entity";
 import { wrap } from "@mikro-orm/core";
 import { ActionEnum, ItApproveDto } from "./dto/itApprove.dto";
-import { AddCategory, AddSubCategory, TicketFilterDto, TicketStatusEnum } from "./dto/createTicket.dto";
+import { AddCategory, AddSubCategory, FilteredDashboardDto, TicketFilterDto, TicketStatusEnum } from "./dto/createTicket.dto";
 
 
 @Injectable()
@@ -165,6 +165,9 @@ export class TicketingService {
     if (dto.status) {
       options.approvedByIt = dto.status === TicketStatusEnum.open ? { $eq: null } : { $ne: null };
     }
+    if (dto.it) {
+      options.approvedByIt = dto.it;
+    }
     const result = await this.ticketRepo.findAndCount(
       options, {
       populate: ['createdBy', 'approvedByIt'],
@@ -262,42 +265,61 @@ export class TicketingService {
     })
   }
 
-  async getDashboard() {
+  async getDashboard(dto: FilteredDashboardDto) {
     const now = new Date();
     const monthstart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthend = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const options: FilterQuery<Ticketing> = {};
+    if (dto.date) {
+      const startOfDay = new Date(dto.date);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(dto.date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      options.createdAt = { $gte: startOfDay, $lte: endOfDay };
+    } else {
+      options.createdAt = { $lte: monthend }, { $gt: monthstart }
+    }
+    if (dto.it) {
+      options.approvedByIt = dto.it;
+    }
     const [openIncident, closeIncident, openService, closeService] = await Promise.all([
       this.ticketRepo.count({
+        ...options,
         type: TicketingType.Incident,
         resolvedAt: { $eq: null },
-        $and: [
-          { createdAt: { $lte: monthend } },
-          { createdAt: { $gt: monthstart } }
-        ]
+        // $and: [
+        //   { createdAt: { $lte: monthend } },
+        //   { createdAt: { $gt: monthstart } }
+        // ]
       }),
       this.ticketRepo.count({
+        ...options,
         type: TicketingType.Incident,
         resolvedAt: { $ne: null },
-        $and: [
-          { createdAt: { $lte: monthend } },
-          { createdAt: { $gt: monthstart } }
-        ]
+        // $and: [
+        //   { createdAt: { $lte: monthend } },
+        //   { createdAt: { $gt: monthstart } }
+        // ]
       }),
       this.ticketRepo.count({
+        ...options,
         type: TicketingType.Service,
         resolvedAt: { $eq: null },
-        $and: [
-          { createdAt: { $lte: monthend } },
-          { createdAt: { $gt: monthstart } }
-        ]
+        // $and: [
+        //   { createdAt: { $lte: monthend } },
+        //   { createdAt: { $gt: monthstart } }
+        // ]
       }),
       this.ticketRepo.count({
+        ...options,
         type: TicketingType.Service,
         resolvedAt: { $ne: null },
-        $and: [
-          { createdAt: { $lte: monthend } },
-          { createdAt: { $gt: monthstart } }
-        ]
+        // $and: [
+        //   { createdAt: { $lte: monthend } },
+        //   { createdAt: { $gt: monthstart } }
+        // ]
       })
     ]);
     return ({
