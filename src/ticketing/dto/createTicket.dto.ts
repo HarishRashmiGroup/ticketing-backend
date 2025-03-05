@@ -59,6 +59,14 @@ export class TicketFilterDto {
     @IsString()
     it: string;
 
+    @IsOptional()
+    @IsString()
+    ticketNo: string;
+
+    @IsOptional()
+    @IsString()
+    createdBy: string;
+
     @Transform(({ value }) => (Number(value)))
     @IsNumber()
     pageNumber: number;

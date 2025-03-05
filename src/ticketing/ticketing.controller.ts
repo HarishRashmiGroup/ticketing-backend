@@ -6,6 +6,7 @@ import {
   Body,
   Patch,
   Query,
+  Res,
 } from "@nestjs/common";
 import { TicketingService } from "./ticketing.service";
 import { AddCategory, AddSubCategory, CreateTicketDto, FilteredDashboardDto, PageDto, TicketFilterDto } from "./dto/createTicket.dto";
@@ -16,6 +17,7 @@ import { UserRole } from "src/user/entities/user.entity";
 import { HeadApproveDto, ItApproveDto, RequestTypeEnum } from "./dto/itApprove.dto";
 import { TicketingType } from "./entities/ticketing.entity";
 import { SubCategory } from "./entities/subcategory.entity";
+import { Response } from "express";
 
 @Controller("tickets")
 export class TicketingController {
@@ -56,7 +58,7 @@ export class TicketingController {
 
   @CombineAccess([UserRole.admin, UserRole.it])
   @Get('dashboard')
-  async getDashboard(@Query()dto: FilteredDashboardDto) {
+  async getDashboard(@Query() dto: FilteredDashboardDto) {
     return this.ticketService.getDashboard(dto);
   }
 
@@ -106,5 +108,11 @@ export class TicketingController {
   @Post("add/item")
   async addItem(@Body() dto: AddSubCategory) {
     return this.ticketService.addItem(dto);
+  }
+
+  // @CombineAccess([UserRole.admin, UserRole.it])
+  @Post("/excel/download")
+  async downloadExcel(@Res() response: Response) {
+    return this.ticketService.downloadTicketsExcel(response);
   }
 }

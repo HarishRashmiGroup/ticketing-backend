@@ -1,7 +1,7 @@
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { BadRequestException, HttpCode, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { User, UserRole } from "./entities/user.entity";
-import { EntityManager, EntityRepository, wrap } from "@mikro-orm/postgresql";
+import { EntityManager, EntityRepository, FilterQuery, wrap } from "@mikro-orm/postgresql";
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { otpTemplate } from "../email/email.template";
@@ -207,6 +207,19 @@ export class UserService {
         if (iTUsers.length == 0) return [];
         return iTUsers.map((u) => ({
             id: u.id,
+            label: u.name
+        }));
+    }
+
+    async getUsers(searchText: string) {
+        const options: FilterQuery<User> = { id: { $ne: null } };
+        if (searchText?.trim()) {
+            options.name = { $ilike: `%${searchText.trim()}%` };
+        }
+        const users = await this.userRepository.find(options, { limit: 5, orderBy: { name: 'ASC' } });
+        if (users.length == 0) return [];
+        return users.map((u) => ({
+            value: u.id,
             label: u.name
         }));
     }

@@ -11,6 +11,8 @@ import { Item } from "./entities/item.entity";
 import { wrap } from "@mikro-orm/core";
 import { ActionEnum, ItApproveDto } from "./dto/itApprove.dto";
 import { AddCategory, AddSubCategory, FilteredDashboardDto, TicketFilterDto, TicketStatusEnum } from "./dto/createTicket.dto";
+import { Response } from "express";
+import * as ExcelJS from 'exceljs';
 
 
 @Injectable()
@@ -167,6 +169,12 @@ export class TicketingService {
     }
     if (dto.it) {
       options.approvedByIt = dto.it;
+    }
+    if (dto.createdBy) {
+      options.createdBy = dto.createdBy;
+    }
+    if(dto.ticketNo){
+      options.serialNo = dto.ticketNo;
     }
     const result = await this.ticketRepo.findAndCount(
       options, {
@@ -385,5 +393,99 @@ export class TicketingService {
       id: item.id,
       label: item.name
     })
+  }
+
+  async downloadTicketsExcel(response: Response) {
+    const tickets = await this.ticketRepo.find({ id: { $ne: null } }, { populate: ['category', 'subCategory', 'item', 'createdBy', 'approvedByIt'] });
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Ticket Report');
+    worksheet.properties.defaultRowHeight = 20;
+    worksheet.columns = [
+      { header: 'Ticket No', key: 'ticketNo', width: 20 },
+      { header: 'Created On', key: 'createdOn', width: 20 },
+      { header: 'Created By', key: 'createdBy', width: 25 },
+      { header: 'Description', key: 'description', width: 50},
+      { header: 'Type', key: 'type', width: 15 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Level of Approval', key: 'levelOfApproval', width: 20 },
+      { header: 'Remark By IT', key: 'remarkByIT', width: 40 },
+      { header: 'Resolved On', key: 'resolveAt', width: 20 },
+      { header: 'Department', key: 'department', width: 25 },
+      { header: 'Category', key: 'category', width: 25 },
+      { header: 'Sub Category', key: 'subCategory', width: 25 },
+      { header: 'Item', key: 'item', width: 25 }
+    ];
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFF' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: '4472C4' }
+      };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+    tickets.forEach(ticket => {
+      const excelRow = worksheet.addRow({
+        ticketNo: ticket.serialNo,
+        createdOn: ticket.createdAt.toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric"
+        }),
+        createdBy: ticket.createdBy.name,
+        description: ticket.query,
+        type: ticket.type,
+        status: ticket.resolvedAt ? "Resolved" : "Open",
+        levelOfApproval: "L1",
+        remarkByIT: ticket.itReview,
+        resolvedAt: new Date(ticket.resolvedAt).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric"
+        }),
+        department: ticket.createdBy.department,
+        category: ticket.category.name,
+        subCategory: ticket.subCategory.name,
+        item: ticket.item.name,
+      });
+      excelRow.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      });
+
+      if (ticket.resolvedAt === null) {
+        excelRow.eachCell({ includeEmpty: true }, (cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFC7CE' }
+          };
+          cell.font = {
+            color: { argb: '9B1C1C' },
+            bold: true
+          };
+        });
+      }
+
+    });
+    worksheet.views = [
+      { state: 'frozen', xSplit: 0, ySplit: 1, activeCell: 'A2' }
+    ];
+    response.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    response.setHeader('Content-Disposition', `attachment; filename=ticket_report${new Date().getTime()}.xlsx`);
+
+    await workbook.xlsx.write(response);
+    response.end();
   }
 }
