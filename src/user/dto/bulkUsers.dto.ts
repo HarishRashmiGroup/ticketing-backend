@@ -21,7 +21,7 @@ export class UserDto {
     @IsString()
     passkey: string;
 
-    @Optional()
+    @IsOptional()
     @Transform(({ value }) => value.toLowerCase().trim())
     @IsString()
     email: string | null;
