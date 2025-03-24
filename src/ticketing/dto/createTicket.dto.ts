@@ -24,6 +24,11 @@ export class CreateTicketDto {
 
     @IsEnum(TicketingType)
     type: TicketingType
+
+    @IsOptional()
+    @IsString()
+    userId?: string;
+
 }
 
 export class PageDto {
@@ -93,7 +98,6 @@ export class AddSubCategory {
 }
 
 export class FilteredDashboardDto {
-
     @IsOptional()
     @Transform(({ value }) => new Date(value))
     @IsDate()

@@ -216,7 +216,11 @@ export class UserService {
         if (searchText?.trim()) {
             options.name = { $ilike: `%${searchText.trim()}%` };
         }
-        const users = await this.userRepository.find(options, { limit: 5, orderBy: { name: 'ASC' } });
+        else return [];
+        const [users, userById] = await Promise.all([this.userRepository.find(options, { limit: 5, orderBy: { name: 'ASC' } }),
+        this.userRepository.findOne({ id: searchText.trim().replace(/[a-z]/g, c => c.toUpperCase()) })]);
+        if (userById)
+            return ({ value: userById.id, label: userById.name });
         if (users.length == 0) return [];
         return users.map((u) => ({
             value: u.id,

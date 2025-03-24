@@ -25,8 +25,9 @@ export class TicketingController {
 
   @Auth()
   @Post("create")
-  async createTicket(@Body() dto: CreateTicketDto, @User() id: string) {
-    return this.ticketService.createTicket({ id, ...dto });
+  async createTicket(@Body() dto: CreateTicketDto, @User() authenticatedUserId: string) {
+    const userId= dto.userId||authenticatedUserId;
+    return this.ticketService.createTicket({ id:userId, ...dto }, {id:authenticatedUserId});
   }
 
   @CombineAccess([UserRole.admin, UserRole.it])

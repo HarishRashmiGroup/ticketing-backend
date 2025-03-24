@@ -44,23 +44,57 @@ export class TicketingService {
     await this.em.flush();
   }
 
-  async createTicket({ id, query, type, category, subCategory, item, priority, attachmentId }: { id: string, query: string, category: string, subCategory: string, item: string, type: TicketingType, priority: PriorityEnum, attachmentId?: number }) {
+  async createTicket(
+    {
+      id,
+      query,
+      type,
+      category,
+      subCategory,
+      item,
+      priority,
+      attachmentId
+    }: {
+      id?: string,
+      query: string,
+      category: string,
+      subCategory: string,
+      item: string,
+      type: TicketingType,
+      priority: PriorityEnum,
+      attachmentId?: number
+    },
+    authenticatedUser: { id: string }
+  ) {
+    const userId = id || authenticatedUser.id;
+
     const [user, ticketCategory, ticketSubCategory, ticketItem, attachment] = await Promise.all([
-      this.userRepo.findOneOrFail({ id }),
+      this.userRepo.findOneOrFail({ id: userId }),
       this.em.findOneOrFail(Category, { name: category, type }),
       this.em.findOneOrFail(SubCategory, { name: subCategory, category: { name: category } }, { populate: ['category'] }),
       this.em.findOneOrFail(Item, { name: item, subCategory: { name: subCategory } }, { populate: ['subCategory'] }),
-      isNaN(attachmentId) ? null : this.em.findOneOrFail(Media, { id: attachmentId })
+      attachmentId ? this.em.findOneOrFail(Media, { id: attachmentId }) : null
     ]);
 
-    const ticket = new Ticketing({ query, type, priority, category: ticketCategory, subCategory: ticketSubCategory, item: ticketItem, createdBy: user, attachment });
+    const ticket = new Ticketing({
+      query,
+      type,
+      priority,
+      category: ticketCategory,
+      subCategory: ticketSubCategory,
+      item: ticketItem,
+      createdBy: user,
+      attachment
+    });
+
     await this.em.persistAndFlush(ticket);
     await this.assignSequenceToTicket(ticket);
-    return ({
+
+    return {
       message: 'Ticket Created successfully!',
       ticketNo: ticket.serialNo,
       status: 201 as const,
-    })
+    };
   }
 
   async getTicketById(id: number) {
@@ -173,7 +207,7 @@ export class TicketingService {
     if (dto.createdBy) {
       options.createdBy = dto.createdBy;
     }
-    if(dto.ticketNo){
+    if (dto.ticketNo) {
       options.serialNo = dto.ticketNo;
     }
     const result = await this.ticketRepo.findAndCount(
@@ -404,7 +438,7 @@ export class TicketingService {
       { header: 'Ticket No', key: 'ticketNo', width: 20 },
       { header: 'Created On', key: 'createdOn', width: 20 },
       { header: 'Created By', key: 'createdBy', width: 25 },
-      { header: 'Description', key: 'description', width: 50},
+      { header: 'Description', key: 'description', width: 50 },
       { header: 'Type', key: 'type', width: 15 },
       { header: 'Status', key: 'status', width: 15 },
       { header: 'Level of Approval', key: 'levelOfApproval', width: 20 },
