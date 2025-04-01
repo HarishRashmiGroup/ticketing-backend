@@ -8,10 +8,11 @@ import { SubCategory } from "./entities/subcategory.entity";
 import { Item } from "./entities/item.entity";
 import { User } from "src/user/entities/user.entity";
 import { Media } from "src/media/entities/media.entity";
+import { EmailService } from "src/email/email.service";
 
 @Module({
   imports: [MikroOrmModule.forFeature([Ticketing, Category, SubCategory, Item, User, Media])],
   controllers: [TicketingController],
-  providers: [TicketingService],
+  providers: [TicketingService, EmailService],
 })
 export class TicketingModule {}

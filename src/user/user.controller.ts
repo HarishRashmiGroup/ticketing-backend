@@ -74,7 +74,7 @@ export class UserController {
         return this.userService.getITUsers();
     }
 
-    // @CombineAccess([UserRole.admin, UserRole.it])
+    @CombineAccess([UserRole.admin, UserRole.it])
     @Get('/users')
     getUsers(@Query('searchText')searchText: string) {
         return this.userService.getUsers(searchText);

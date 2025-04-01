@@ -92,7 +92,7 @@ export class UserService {
     }
 
     async getBasicDetails(id: string) {
-        const user = await this.userRepository.findOneOrFail({ id: id.replace(/[a-z]/g, c => c.toUpperCase()) }, { populate: ['reportingTo'] });
+        const user = await this.userRepository.findOneOrFail({ id: id.trim().replace(/[a-z]/g, c => c.toUpperCase()) }, { populate: ['reportingTo'] });
         return ({
             id: user.id,
             name: user.name,
@@ -105,7 +105,7 @@ export class UserService {
     }
 
     async getUserInfo(id: string) {
-        const user = await this.userRepository.findOneOrFail({ id: id.replace(/[a-z]/g, c => c.toUpperCase()) }, { populate: ['reportingTo'] });
+        const user = await this.userRepository.findOneOrFail({ id: id.trim().replace(/[a-z]/g, c => c.toUpperCase()) }, { populate: ['reportingTo'] });
         return ({
             id: user.id,
             name: user.name,
@@ -220,11 +220,11 @@ export class UserService {
         const [users, userById] = await Promise.all([this.userRepository.find(options, { limit: 5, orderBy: { name: 'ASC' } }),
         this.userRepository.findOne({ id: searchText.trim().replace(/[a-z]/g, c => c.toUpperCase()) })]);
         if (userById)
-            return ({ value: userById.id, label: userById.name });
+            return ([{ value: userById.id, label: userById.name + "( " + userById.id + " )" }]);
         if (users.length == 0) return [];
         return users.map((u) => ({
             value: u.id,
-            label: u.name
+            label: u.name + "( " + u.id + " )"
         }));
     }
 

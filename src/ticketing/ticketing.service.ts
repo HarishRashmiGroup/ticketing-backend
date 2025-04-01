@@ -13,6 +13,8 @@ import { ActionEnum, ItApproveDto } from "./dto/itApprove.dto";
 import { AddCategory, AddSubCategory, FilteredDashboardDto, TicketFilterDto, TicketStatusEnum } from "./dto/createTicket.dto";
 import { Response } from "express";
 import * as ExcelJS from 'exceljs';
+import { EmailService } from "src/email/email.service";
+import { ticketTemplate } from "src/email/email.template";
 
 
 @Injectable()
@@ -21,6 +23,7 @@ export class TicketingService {
     @InjectRepository(Ticketing) private readonly ticketRepo: EntityRepository<Ticketing>,
     @InjectRepository(User) private readonly userRepo: EntityRepository<User>,
     @InjectRepository(Media) private readonly mediaRepo: EntityRepository<Media>,
+    private readonly emailService: EmailService,
     private readonly em: EntityManager
   ) { }
 
@@ -42,6 +45,8 @@ export class TicketingService {
     const sequenceId = `${prefix}${month}${year}${sequnce}`;
     wrap(ticket).assign({ serialNo: sequenceId });
     await this.em.flush();
+    if (ticket.createdBy.email && ticket.createdBy.role !== UserRole.it)
+      this.emailService.sendEmail(ticket.createdBy.email, `Ticket #${ticket.serialNo} Raised Successfully.`, ticketTemplate(ticket));
   }
 
   async createTicket(
@@ -66,7 +71,7 @@ export class TicketingService {
     },
     authenticatedUser: { id: string }
   ) {
-    const userId = id || authenticatedUser.id;
+    const userId = id.trim().replace(/[a-z]/g, c => c.toUpperCase()) || authenticatedUser.id;
 
     const [user, ticketCategory, ticketSubCategory, ticketItem, attachment] = await Promise.all([
       this.userRepo.findOneOrFail({ id: userId }),
@@ -300,7 +305,9 @@ export class TicketingService {
       throw new BadRequestException("Ticket already Resolved.")
     }
     wrap(ticket).assign({ category, subCategory, item, query: dto.query, resolvedAt: new Date(), approvedByIt: this.em.getReference(User, userId), itReview: dto.remark });
-    await this.em.flush()
+    await this.em.flush();
+    if (ticket.createdBy.email && ticket.createdBy.role !== UserRole.it)
+      this.emailService.sendEmail(ticket.createdBy.email, `Ticket #${ticket.serialNo} Resolved By IT.`, ticketTemplate(ticket));
     return ({
       message: "Approved",
       status: 200 as const
@@ -438,6 +445,7 @@ export class TicketingService {
       { header: 'Ticket No', key: 'ticketNo', width: 20 },
       { header: 'Created On', key: 'createdOn', width: 20 },
       { header: 'Created By', key: 'createdBy', width: 25 },
+      { header: 'Resolved By', key: 'resolvedBy', width: 25 },
       { header: 'Description', key: 'description', width: 50 },
       { header: 'Type', key: 'type', width: 15 },
       { header: 'Status', key: 'status', width: 15 },
@@ -473,6 +481,7 @@ export class TicketingService {
           year: "numeric"
         }),
         createdBy: ticket.createdBy.name,
+        resolvedBy: ticket.approvedByIt?.name || "",
         description: ticket.query,
         type: ticket.type,
         status: ticket.resolvedAt ? "Resolved" : "Open",
