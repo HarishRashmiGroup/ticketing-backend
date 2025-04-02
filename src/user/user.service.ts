@@ -8,6 +8,8 @@ import { otpTemplate } from "../email/email.template";
 import { randomInt } from "crypto";
 import { EmailService } from "src/email/email.service";
 import { BulkUsersDto, UserDto } from "./dto/bulkUsers.dto";
+import { PageDto } from "src/ticketing/dto/createTicket.dto";
+import { SuperAdminUsersRO } from "./ro/SuperAdminUsers.ro";
 
 const saltRounds = 10;
 @Injectable()
@@ -226,6 +228,16 @@ export class UserService {
             value: u.id,
             label: u.name + "( " + u.id + " )"
         }));
+    }
+
+    async getPaginatedUsers(dto: PageDto) {
+        const [users, count] = await this.userRepository.findAndCount({ id: { $ne: null } }, { populate: ['reportingTo'], limit: dto.pageSize, offset: (dto.pageNumber - 1) * dto.pageSize, orderBy: { id: 'ASC' } });
+        const lists = users.map((user) => new SuperAdminUsersRO(user));
+        return ({
+            lists,
+            pageNumber: dto.pageNumber,
+            totalPages: Math.ceil(count / dto.pageSize)
+        })
     }
 
 }

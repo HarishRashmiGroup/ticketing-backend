@@ -20,7 +20,7 @@ export class EmailService implements OnModuleDestroy {
         port: 587,
         secure: false,
         auth: {
-          user: 'harish.kumar@rashmigroup.com',
+          user: 'ithelpdesk@rashmigroup.com',
           pass: process.env.email_password,
         },
         tls: {
@@ -58,7 +58,7 @@ export class EmailService implements OnModuleDestroy {
         if (email) {
           try {
             await transporter.sendMail({
-              from: '"Rashmi Group IT Team" <harish.kumar@rashmigroup.com>',
+              from: '"Rashmi Group IT Team" <ithelpdesk@rashmigroup.com>',
               ...email,
             });
             this.logger.debug(`Email sent successfully to ${email.to}`);

@@ -6,6 +6,7 @@ import { EmailDto, LoginDto, PasswordDto, ResetPassword } from "./dto/login.dto"
 import { GetUserFromToken, User } from "src/common/decorators/user.decorator";
 import { CombineAccess } from "src/common/decorators/combine-access.decorator";
 import { BulkUsersDto, UserDto } from "./dto/bulkUsers.dto";
+import { PageDto } from "src/ticketing/dto/createTicket.dto";
 
 @Controller('user')
 export class UserController {
@@ -76,7 +77,13 @@ export class UserController {
 
     @CombineAccess([UserRole.admin, UserRole.it])
     @Get('/users')
-    getUsers(@Query('searchText')searchText: string) {
+    getUsers(@Query('searchText') searchText: string) {
         return this.userService.getUsers(searchText);
+    }
+
+    @CombineAccess([UserRole.admin, UserRole.it])
+    @Get('/super-admin/users')
+    getPaginatedUsers(@Query() dto: PageDto) {
+        return this.userService.getPaginatedUsers(dto);
     }
 }

@@ -296,7 +296,7 @@ export class TicketingService {
 
   async resolvedByIt(dto: ItApproveDto, id: number, userId: string) {
     const [ticket, category, subCategory, item] = await Promise.all([
-      this.ticketRepo.findOneOrFail({ id }),
+      this.ticketRepo.findOneOrFail({ id }, { populate: ['createdBy'] }),
       this.em.findOneOrFail(Category, { name: dto.category, type: dto.type }),
       this.em.findOneOrFail(SubCategory, { name: dto.subCategory, category: { name: dto.category } }, { populate: ['category'] }),
       this.em.findOneOrFail(Item, { name: dto.item, subCategory: { name: dto.subCategory } }, { populate: ['subCategory'] }),
