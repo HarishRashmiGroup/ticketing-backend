@@ -15,6 +15,7 @@ import { Response } from "express";
 import * as ExcelJS from 'exceljs';
 import { EmailService } from "src/email/email.service";
 import { ticketTemplate } from "src/email/email.template";
+import { ReportDto } from "./dto/report.dto";
 
 
 @Injectable()
@@ -436,8 +437,34 @@ export class TicketingService {
     })
   }
 
-  async downloadTicketsExcel(response: Response) {
-    const tickets = await this.ticketRepo.find({ id: { $ne: null } }, { populate: ['category', 'subCategory', 'item', 'createdBy', 'approvedByIt'] });
+  async downloadTicketsExcel(dto: ReportDto, response: Response) {
+    const options: FilterQuery<Ticketing> = { id: { $ne: null } };
+    console.log(dto);
+    if (dto.itEngineerId) {
+      options.approvedByIt = dto.itEngineerId;
+    }
+    if (dto.department) {
+      options.createdBy = { department: dto.department }
+    }
+    if (dto.month && dto.year) {
+      const startingOfMonth = new Date(dto.year, dto.month, 1);
+      const endOfMonth = new Date(dto.year, dto.month + 1, 0, 23, 59, 59, 999);
+      options.createdAt = { $gte: startingOfMonth, $lte: endOfMonth };
+    }
+    if (dto.startDate && !isNaN(new Date(dto.startDate).getTime())) {
+      if (!isNaN(new Date(dto.endDate).getTime())) {
+        options.createdAt = { $gte: dto.startDate, $lte: dto.endDate }
+      } else {
+        const endDate = new Date(dto.startDate);
+        endDate.setHours(23, 59, 59, 999);
+        options.createdAt = { $gte: dto.startDate, $lte: endDate }
+      }
+    }
+    if (dto.status) {
+      if (dto.status == TicketStatusEnum.open) options.itReview = { $eq: null };
+      options.itReview = { $ne: null };
+    }
+    const tickets = await this.ticketRepo.find(options, { populate: ['category', 'subCategory', 'item', 'createdBy', 'approvedByIt'] });
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Ticket Report');
     worksheet.properties.defaultRowHeight = 20;

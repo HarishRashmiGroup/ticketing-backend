@@ -18,6 +18,7 @@ import { HeadApproveDto, ItApproveDto, RequestTypeEnum } from "./dto/itApprove.d
 import { TicketingType } from "./entities/ticketing.entity";
 import { SubCategory } from "./entities/subcategory.entity";
 import { Response } from "express";
+import { ReportDto } from "./dto/report.dto";
 
 @Controller("tickets")
 export class TicketingController {
@@ -26,8 +27,8 @@ export class TicketingController {
   @Auth()
   @Post("create")
   async createTicket(@Body() dto: CreateTicketDto, @User() authenticatedUserId: string) {
-    const userId= dto.userId||authenticatedUserId;
-    return this.ticketService.createTicket({ id:userId, ...dto }, {id:authenticatedUserId});
+    const userId = dto.userId || authenticatedUserId;
+    return this.ticketService.createTicket({ id: userId, ...dto }, { id: authenticatedUserId });
   }
 
   @CombineAccess([UserRole.admin, UserRole.it])
@@ -112,8 +113,8 @@ export class TicketingController {
   }
 
   // @CombineAccess([UserRole.admin, UserRole.it])
-  @Post("/excel/download")
-  async downloadExcel(@Res() response: Response) {
-    return this.ticketService.downloadTicketsExcel(response);
+  @Get("/excel/download")
+  async downloadExcel(@Query() dto: ReportDto, @Res() response: Response) {
+    return this.ticketService.downloadTicketsExcel(dto, response);
   }
 }
