@@ -26,7 +26,7 @@ export class ReportDto {
     startDate: Date;
 
     @IsOptional()
-    @Transform(({ value }) => new Date(value).setHours(23, 59, 59, 999))
+    @Transform(({ value }) => { const enddate = new Date(value); enddate.setHours(23, 59, 59, 999); return enddate; })
     endDate: Date;
 
     @IsOptional()
