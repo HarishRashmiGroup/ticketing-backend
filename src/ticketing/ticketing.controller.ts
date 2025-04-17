@@ -9,7 +9,7 @@ import {
   Res,
 } from "@nestjs/common";
 import { TicketingService } from "./ticketing.service";
-import { AddCategory, AddSubCategory, CreateTicketDto, FilteredDashboardDto, PageDto, TicketFilterDto } from "./dto/createTicket.dto";
+import { AddCategory, AddSubCategory, CreateTicketDto, FeedbackDto, FilteredDashboardDto, PageDto, TicketFilterDto } from "./dto/createTicket.dto";
 import { User } from "src/common/decorators/user.decorator";
 import { Auth } from "src/common/decorators/auth.decorator";
 import { CombineAccess } from "src/common/decorators/combine-access.decorator";
@@ -66,8 +66,14 @@ export class TicketingController {
 
   @Auth()
   @Get(":id")
-  async getTicket(@Param("id") id: number) {
-    return this.ticketService.getTicketById(id);
+  async getTicket(@Param("id") id: number, @User() userId: string) {
+    return this.ticketService.getTicketById(id, userId);
+  }
+
+  @Auth()
+  @Post("/submission/feedback")
+  async postRating(@Body() feedbackDto: FeedbackDto, @User() userId: string) {
+    return this.ticketService.postRating(feedbackDto, userId);
   }
 
   @Auth()

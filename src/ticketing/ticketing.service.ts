@@ -10,7 +10,7 @@ import { SubCategory } from "./entities/subcategory.entity";
 import { Item } from "./entities/item.entity";
 import { wrap } from "@mikro-orm/core";
 import { ActionEnum, ItApproveDto } from "./dto/itApprove.dto";
-import { AddCategory, AddSubCategory, FilteredDashboardDto, TicketFilterDto, TicketStatusEnum } from "./dto/createTicket.dto";
+import { AddCategory, AddSubCategory, FeedbackDto, FilteredDashboardDto, TicketFilterDto, TicketStatusEnum } from "./dto/createTicket.dto";
 import { Response } from "express";
 import * as ExcelJS from 'exceljs';
 import { EmailService } from "src/email/email.service";
@@ -103,11 +103,14 @@ export class TicketingService {
     };
   }
 
-  async getTicketById(id: number) {
+  async getTicketById(id: number, userId: string) {
     if (isNaN(Number(id))) {
       throw new BadRequestException("Id should be a number.");
     }
     const ticket = await this.ticketRepo.findOneOrFail({ id }, { populate: ["createdBy", "attachment", "category", "subCategory", "item", "approvedByHead"] });
+    if (ticket.createdBy.role === UserRole.employee && ticket.createdBy.id !== userId) {
+      throw new BadRequestException('Invalid Ticket.');
+    }
     const data = {
       id: ticket.id,
       sequenceNo: ticket.serialNo,
@@ -127,6 +130,8 @@ export class TicketingService {
       approvedByHeadAt: ticket.headApprovalAt,
       resolvedAt: ticket.resolvedAt,
       itHeadRemark: ticket.headRemark ?? "",
+      feedback: ticket.feedback,
+      rating: ticket.rating,
       remark: ticket.itReview,
     };
     return data;
@@ -150,6 +155,8 @@ export class TicketingService {
       type: ticket.type,
       reOpenedAt: ticket.reOpenedAt,
       resolvedAt: ticket.resolvedAt,
+      feedback: ticket.feedback,
+      rating: ticket.rating,
       remark: ticket.itReview,
     }))
     return ({
@@ -476,9 +483,8 @@ export class TicketingService {
       { header: 'Description', key: 'description', width: 50 },
       { header: 'Type', key: 'type', width: 15 },
       { header: 'Status', key: 'status', width: 15 },
-      { header: 'Level of Approval', key: 'levelOfApproval', width: 20 },
       { header: 'Remark By IT', key: 'remarkByIT', width: 40 },
-      { header: 'Resolved On', key: 'resolveAt', width: 20 },
+      { header: 'Resolved On', key: 'resolvedAt', width: 20 },
       { header: 'Department', key: 'department', width: 25 },
       { header: 'Category', key: 'category', width: 25 },
       { header: 'Sub Category', key: 'subCategory', width: 25 },
@@ -512,7 +518,6 @@ export class TicketingService {
         description: ticket.query,
         type: ticket.type,
         status: ticket.resolvedAt ? "Resolved" : "Open",
-        levelOfApproval: "L1",
         remarkByIT: ticket.itReview,
         resolvedAt: new Date(ticket.resolvedAt).toLocaleDateString("en-GB", {
           day: "2-digit",
@@ -557,5 +562,15 @@ export class TicketingService {
 
     await workbook.xlsx.write(response);
     response.end();
+  }
+
+  async postRating(dto: FeedbackDto, userId: string) {
+    const ticket = await this.ticketRepo.findOneOrFail({ id: dto.ticketId, createdBy: userId, resolvedAt: { $ne: null } });
+    wrap(ticket).assign({ feedback: dto.feedback, rating: dto.rating });
+    await this.em.flush();
+    return {
+      message: "Thank you for sharing your feedback.",
+      status: 201 as const,
+    }
   }
 }

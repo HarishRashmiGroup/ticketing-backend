@@ -1,4 +1,4 @@
-import { IsDate, IsEnum, IsNumber, IsOptional, IsString } from "class-validator";
+import { IsDate, IsEnum, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
 import { PriorityEnum, TicketingType } from "../entities/ticketing.entity";
 import { Transform } from "class-transformer";
 
@@ -106,4 +106,18 @@ export class FilteredDashboardDto {
     @IsOptional()
     @IsString()
     it: string;
+}
+
+export class FeedbackDto {
+    @IsOptional()
+    @IsString()
+    feedback: string;
+
+    @Min(1)
+    @Max(5)
+    @IsNumber()
+    rating: number;
+
+    @IsNumber()
+    ticketId: number;
 }

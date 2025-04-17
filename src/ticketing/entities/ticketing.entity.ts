@@ -4,6 +4,7 @@ import { User } from "../../user/entities/user.entity";
 import { Category } from "./categoy.entity";
 import { SubCategory } from "./subcategory.entity";
 import { Item } from "./item.entity";
+import { Max, Min } from "class-validator";
 
 export enum TicketingType {
     Incident = 'Incident',
@@ -77,6 +78,14 @@ export class Ticketing {
 
     @Property({ columnType: 'text', nullable: true, default: null })
     headRemark: string | null;
+
+    @Property({ columnType: 'text', nullable: true, default: null })
+    feedback: string | null;
+
+    @Max(5)
+    @Min(1)
+    @Property({ columnType: 'integer', nullable: true, default: null })
+    rating: number | null = null;
 
     @OneToOne({ entity: () => Media, nullable: true })
     attachment: Media;
