@@ -121,3 +121,11 @@ export class FeedbackDto {
     @IsNumber()
     ticketId: number;
 }
+
+export class EditQueryDto {
+    @IsString()
+    query: string;
+
+    @IsNumber()
+    ticketId: number;
+}

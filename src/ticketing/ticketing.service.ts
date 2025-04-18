@@ -10,7 +10,7 @@ import { SubCategory } from "./entities/subcategory.entity";
 import { Item } from "./entities/item.entity";
 import { wrap } from "@mikro-orm/core";
 import { ActionEnum, ItApproveDto } from "./dto/itApprove.dto";
-import { AddCategory, AddSubCategory, FeedbackDto, FilteredDashboardDto, TicketFilterDto, TicketStatusEnum } from "./dto/createTicket.dto";
+import { AddCategory, AddSubCategory, EditQueryDto, FeedbackDto, FilteredDashboardDto, TicketFilterDto, TicketStatusEnum } from "./dto/createTicket.dto";
 import { Response } from "express";
 import * as ExcelJS from 'exceljs';
 import { EmailService } from "src/email/email.service";
@@ -107,8 +107,11 @@ export class TicketingService {
     if (isNaN(Number(id))) {
       throw new BadRequestException("Id should be a number.");
     }
-    const ticket = await this.ticketRepo.findOneOrFail({ id }, { populate: ["createdBy", "attachment", "category", "subCategory", "item", "approvedByHead"] });
-    if (ticket.createdBy.role === UserRole.employee && ticket.createdBy.id !== userId) {
+    const [ticket, loggedUser] = await Promise.all([
+      this.ticketRepo.findOneOrFail({ id }, { populate: ["createdBy", "attachment", "category", "subCategory", "item", "approvedByHead"] }),
+      this.userRepo.findOneOrFail({ id: userId })
+    ]);
+    if (loggedUser.role === UserRole.employee && ticket.createdBy.id !== userId) {
       throw new BadRequestException('Invalid Ticket.');
     }
     const data = {
@@ -570,6 +573,17 @@ export class TicketingService {
     await this.em.flush();
     return {
       message: "Thank you for sharing your feedback.",
+      status: 201 as const,
+    }
+  }
+
+  async editQuery(dto: EditQueryDto, userId: string) {
+    const options: FilterQuery<Ticketing> = { id: dto.ticketId, resolvedAt: { $eq: null }, createdBy: userId };
+    const ticket = await this.ticketRepo.findOneOrFail(options);
+    wrap(ticket).assign({ query: dto.query });
+    await this.em.flush();
+    return {
+      message: "Description updated successfully.",
       status: 201 as const,
     }
   }
