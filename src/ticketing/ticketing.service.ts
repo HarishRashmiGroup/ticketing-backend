@@ -578,7 +578,9 @@ export class TicketingService {
   }
 
   async editQuery(dto: EditQueryDto, userId: string) {
-    const options: FilterQuery<Ticketing> = { id: dto.ticketId, resolvedAt: { $eq: null }, createdBy: userId };
+    const user = await this.userRepo.findOneOrFail({ id: userId });
+    const options: FilterQuery<Ticketing> = { id: dto.ticketId, resolvedAt: { $eq: null } };
+    if (user.role === UserRole.employee) options.createdBy = userId;
     const ticket = await this.ticketRepo.findOneOrFail(options);
     wrap(ticket).assign({ query: dto.query });
     await this.em.flush();
