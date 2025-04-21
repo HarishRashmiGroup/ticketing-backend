@@ -350,23 +350,23 @@ export class TicketingService {
       this.ticketRepo.count({
         ...options,
         type: TicketingType.Incident,
-        resolvedAt: null
+        resolvedAt: { $eq: null }
       } as FilterQuery<Ticketing>),
       this.ticketRepo.count({
         ...options,
         type: TicketingType.Incident,
-        resolvedAt: null
-      }),
-      this.ticketRepo.count({
-        ...options,
-        type: TicketingType.Service,
-        resolvedAt: null
+        resolvedAt: { $ne: null }
       } as FilterQuery<Ticketing>),
       this.ticketRepo.count({
         ...options,
         type: TicketingType.Service,
-        resolvedAt: null
-      })
+        resolvedAt: { $eq: null }
+      } as FilterQuery<Ticketing>),
+      this.ticketRepo.count({
+        ...options,
+        type: TicketingType.Service,
+        resolvedAt: { $ne: null }
+      } as FilterQuery<Ticketing>),
     ]);
     return ({
       openIncident: openIncident,
