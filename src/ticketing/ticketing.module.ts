@@ -9,10 +9,11 @@ import { Item } from "./entities/item.entity";
 import { User } from "src/user/entities/user.entity";
 import { Media } from "src/media/entities/media.entity";
 import { EmailService } from "src/email/email.service";
+import { Comment } from "./entities/comment.entity";
 
 @Module({
-  imports: [MikroOrmModule.forFeature([Ticketing, Category, SubCategory, Item, User, Media])],
+  imports: [MikroOrmModule.forFeature([Ticketing, Comment, Category, SubCategory, Item, User, Media])],
   controllers: [TicketingController],
   providers: [TicketingService, EmailService],
 })
-export class TicketingModule {}
+export class TicketingModule { }

@@ -1,10 +1,11 @@
-import { Entity, Enum, ManyToOne, OneToOne, PrimaryKey, Property, Unique } from "@mikro-orm/core";
+import { Collection, Entity, Enum, ManyToOne, OneToMany, OneToOne, PrimaryKey, Property } from "@mikro-orm/core";
 import { Media } from "../../media/entities/media.entity";
 import { User } from "../../user/entities/user.entity";
 import { Category } from "./categoy.entity";
 import { SubCategory } from "./subcategory.entity";
 import { Item } from "./item.entity";
 import { Max, Min } from "class-validator";
+import { Comment } from "./comment.entity";
 
 export enum TicketingType {
     Incident = 'Incident',
@@ -46,7 +47,7 @@ export class Ticketing {
     @Property({ default: null })
     reOpenedAt: Date | null = null;
 
-    @Property({ default: null })
+    @Property({ default: null, nullable: true })
     resolvedAt: Date | null;
 
     @ManyToOne(() => Category)
@@ -89,6 +90,9 @@ export class Ticketing {
 
     @OneToOne({ entity: () => Media, nullable: true })
     attachment: Media;
+
+    @OneToMany({ entity: () => Comment, mappedBy: 'ticket' })
+    comments = new Collection<Comment>(this);
 
     @Property()
     createdAt: Date = new Date();

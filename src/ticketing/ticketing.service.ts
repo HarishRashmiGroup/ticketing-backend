@@ -16,6 +16,8 @@ import * as ExcelJS from 'exceljs';
 import { EmailService } from "src/email/email.service";
 import { ticketTemplate } from "src/email/email.template";
 import { ReportDto } from "./dto/report.dto";
+import { Comment } from "./entities/comment.entity";
+import { CommentsRO } from "src/user/ro/comments.ro";
 
 
 @Injectable()
@@ -348,38 +350,22 @@ export class TicketingService {
       this.ticketRepo.count({
         ...options,
         type: TicketingType.Incident,
-        resolvedAt: { $eq: null },
-        // $and: [
-        //   { createdAt: { $lte: monthend } },
-        //   { createdAt: { $gt: monthstart } }
-        // ]
-      }),
+        resolvedAt: null
+      } as FilterQuery<Ticketing>),
       this.ticketRepo.count({
         ...options,
         type: TicketingType.Incident,
-        resolvedAt: { $ne: null },
-        // $and: [
-        //   { createdAt: { $lte: monthend } },
-        //   { createdAt: { $gt: monthstart } }
-        // ]
+        resolvedAt: null
       }),
       this.ticketRepo.count({
         ...options,
         type: TicketingType.Service,
-        resolvedAt: { $eq: null },
-        // $and: [
-        //   { createdAt: { $lte: monthend } },
-        //   { createdAt: { $gt: monthstart } }
-        // ]
-      }),
+        resolvedAt: null
+      } as FilterQuery<Ticketing>),
       this.ticketRepo.count({
         ...options,
         type: TicketingType.Service,
-        resolvedAt: { $ne: null },
-        // $and: [
-        //   { createdAt: { $lte: monthend } },
-        //   { createdAt: { $gt: monthstart } }
-        // ]
+        resolvedAt: null
       })
     ]);
     return ({
@@ -449,7 +435,6 @@ export class TicketingService {
 
   async downloadTicketsExcel(dto: ReportDto, response: Response) {
     const options: FilterQuery<Ticketing> = { id: { $ne: null } };
-    console.log(dto);
     if (dto.itEngineerId) {
       options.approvedByIt = dto.itEngineerId;
     }
@@ -471,8 +456,9 @@ export class TicketingService {
       }
     }
     if (dto.status) {
-      if (dto.status == TicketStatusEnum.open) options.itReview = { $eq: null };
-      options.itReview = { $ne: null };
+      if (dto.status === TicketStatusEnum.open) options.resolvedAt = null;
+      else
+        options.resolvedAt = { $ne: null };
     }
     const tickets = await this.ticketRepo.find(options, { populate: ['category', 'subCategory', 'item', 'createdBy', 'approvedByIt'] });
     const workbook = new ExcelJS.Workbook();
@@ -522,11 +508,11 @@ export class TicketingService {
         type: ticket.type,
         status: ticket.resolvedAt ? "Resolved" : "Open",
         remarkByIT: ticket.itReview,
-        resolvedAt: new Date(ticket.resolvedAt).toLocaleDateString("en-GB", {
+        resolvedAt: ticket.reOpenedAt ? new Date(ticket.resolvedAt).toLocaleDateString("en-GB", {
           day: "2-digit",
           month: "short",
           year: "numeric"
-        }),
+        }) : null,
         department: ticket.createdBy.department,
         category: ticket.category.name,
         subCategory: ticket.subCategory.name,
@@ -588,5 +574,34 @@ export class TicketingService {
       message: "Description updated successfully.",
       status: 201 as const,
     }
+  }
+
+  async postComment(ticketId: number, userId: string, content: string) {
+    const [ticket, user] = await Promise.all([
+      this.ticketRepo.findOneOrFail({ id: ticketId }),
+      this.userRepo.findOneOrFail({ id: userId })
+    ]);
+    const comment = new Comment({ content, author: user, ticket });
+    await this.em.persistAndFlush(comment);
+    return ({
+      message: 'Comment added',
+      status: 200 as const
+    })
+  }
+
+  async fetchComments(ticketId: number, userId: string) {
+    const [ticket, user] = await Promise.all([
+      this.ticketRepo.findOneOrFail({ id: ticketId }, { populate: ['comments', 'comments.author'] }),
+      this.userRepo.findOneOrFail({ id: userId })
+    ]);
+    if (user.role === UserRole.employee && ticket.createdBy.id != userId) {
+      throw new BadRequestException("Invalid Request.");
+    }
+
+    const result = ticket.comments.getItems()
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+      .map(comment => new CommentsRO(comment));
+    if (result.length === 0) return [];
+    return result;
   }
 }

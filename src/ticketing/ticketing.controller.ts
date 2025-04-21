@@ -19,6 +19,7 @@ import { TicketingType } from "./entities/ticketing.entity";
 import { SubCategory } from "./entities/subcategory.entity";
 import { Response } from "express";
 import { ReportDto } from "./dto/report.dto";
+import { CreateCommentDto } from "./dto/comment.dto";
 
 @Controller("tickets")
 export class TicketingController {
@@ -124,9 +125,21 @@ export class TicketingController {
     return this.ticketService.addItem(dto);
   }
 
-  // @CombineAccess([UserRole.admin, UserRole.it])
+  @CombineAccess([UserRole.admin, UserRole.it])
   @Get("/excel/download")
   async downloadExcel(@Query() dto: ReportDto, @Res() response: Response) {
     return this.ticketService.downloadTicketsExcel(dto, response);
+  }
+
+  @Auth()
+  @Post("/comment/new/:id")
+  async postNewComment(@Body() dto: CreateCommentDto, @User() userId: string, @Param('id') ticketId: number) {
+    return this.ticketService.postComment(ticketId, userId, dto.content)
+  }
+
+  @Auth()
+  @Get('/comment/all/:id')
+  async fetchAllComments(@Param('id') ticketId: number, @User() userId: string) {
+    return this.ticketService.fetchComments(ticketId, userId)
   }
 }

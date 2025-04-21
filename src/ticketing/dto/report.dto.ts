@@ -6,28 +6,28 @@ export class ReportDto {
     @IsOptional()
     @Transform(({ value }) => (Number(value)))
     @IsNumber()
-    month: number;
+    month?: number;
 
     @IsOptional()
     @Transform(({ value }) => (Number(value)))
     @IsNumber()
-    year: number;
+    year?: number;
 
     @IsOptional()
     @IsString()
-    itEngineerId: string;
+    itEngineerId?: string;
 
     @IsOptional()
     @IsEnum(TicketStatusEnum)
-    status: TicketStatusEnum;
+    status?: TicketStatusEnum;
 
     @IsOptional()
     @Transform(({ value }) => new Date(value))
-    startDate: Date;
+    startDate?: Date;
 
     @IsOptional()
     @Transform(({ value }) => { const enddate = new Date(value); enddate.setHours(23, 59, 59, 999); return enddate; })
-    endDate: Date;
+    endDate?: Date;
 
     @IsOptional()
     @IsString()
