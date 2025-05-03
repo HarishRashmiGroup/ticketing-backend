@@ -142,4 +142,10 @@ export class TicketingController {
   async fetchAllComments(@Param('id') ticketId: number, @User() userId: string) {
     return this.ticketService.fetchComments(ticketId, userId)
   }
+
+  @Auth()
+  @Post('/mark/read/comment/:id')
+  async markCommentsAsRead(@Param('id') ticketId: number, @User() userId: string) {
+    return this.ticketService.markCommentAsRead(ticketId, userId);
+  }
 }

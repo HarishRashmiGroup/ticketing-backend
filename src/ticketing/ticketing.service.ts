@@ -146,7 +146,7 @@ export class TicketingService {
     const user = await this.userRepo.findOneOrFail(id);
     const options: FilterQuery<Ticketing> = {};
     options.createdBy = user;
-    const result = await this.ticketRepo.findAndCount(options, { populate: ['createdBy'], orderBy: { resolvedAt: 'desc nulls first', createdAt: 'DESC' }, limit: pageSize, offset: (pageNumber - 1) * pageSize });
+    const result = await this.ticketRepo.findAndCount(options, { populate: ['createdBy', 'comments'], orderBy: { resolvedAt: 'desc nulls first', createdAt: 'DESC' }, limit: pageSize, offset: (pageNumber - 1) * pageSize });
     const lists = result[0].map((ticket) => ({
       id: ticket.id,
       sequenceNo: ticket.serialNo,
@@ -158,6 +158,7 @@ export class TicketingService {
       }),
       createdBy: ticket.createdBy.name,
       type: ticket.type,
+      unReadComments: ticket.comments.getItems().some((comment) => comment.author.id !== user.id && comment.userRead === false),
       reOpenedAt: ticket.reOpenedAt,
       resolvedAt: ticket.resolvedAt,
       feedback: ticket.feedback,
@@ -603,5 +604,26 @@ export class TicketingService {
       .map(comment => new CommentsRO(comment));
     if (result.length === 0) return [];
     return result;
+  }
+
+  async markCommentAsRead(ticketId: number, userId: string) {
+    const ticket = await this.ticketRepo.findOneOrFail({ id: ticketId }, { populate: ['comments', 'comments.author'] });
+    if (ticket.createdBy.id != userId) {
+      throw new BadRequestException("Invalid Request.");
+    }
+
+    const unReadComments = ticket.comments.getItems().filter((comment) => comment.author.id !== userId && comment.userRead === false);
+    if (unReadComments.length === 0) return ({
+      message: 'Comment read marked.',
+      read: 0 as const,
+      status: 200 as const
+    });
+    unReadComments.map((comment) => wrap(comment).assign({ userRead: true }));
+    await this.em.flush();
+    return ({
+      message: 'Comment read marked.',
+      read: 1 as const,
+      status: 200 as const
+    });
   }
 }

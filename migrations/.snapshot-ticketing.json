@@ -815,6 +815,16 @@
           "nullable": false,
           "mappedType": "text"
         },
+        "user_read": {
+          "name": "user_read",
+          "type": "boolean",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "default": "false",
+          "mappedType": "boolean"
+        },
         "author_id": {
           "name": "author_id",
           "type": "varchar(255)",

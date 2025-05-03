@@ -10,6 +10,9 @@ export class Comment {
     @Property({ columnType: 'text' })
     content: string;
 
+    @Property({ columnType: 'boolean', default: false })
+    userRead: boolean = false;
+
     @ManyToOne({ entity: () => User })
     author: User;
 
