@@ -231,7 +231,7 @@ export class TicketingService {
     }
     const result = await this.ticketRepo.findAndCount(
       options, {
-      populate: ['createdBy', 'approvedByIt'],
+      populate: ['createdBy', 'approvedByIt', 'comments', 'comments.author'],
       orderBy: { resolvedAt: 'DESC NULLS FIRST', createdAt: 'DESC' },
       limit: pageSize,
       offset: (pageNumber - 1) * pageSize
@@ -257,6 +257,7 @@ export class TicketingService {
       remark: ticket.itReview,
       resolvedBy: ticket.approvedByIt?.name,
       resolvedAt: ticket.resolvedAt,
+      unReadComments: ticket.comments.getItems().some((comment) => comment.author.role !== UserRole.it && comment.userRead === false),
     }));
     return ({
       lists,
@@ -509,7 +510,7 @@ export class TicketingService {
         type: ticket.type,
         status: ticket.resolvedAt ? "Resolved" : "Open",
         remarkByIT: ticket.itReview,
-        resolvedAt: ticket.reOpenedAt ? new Date(ticket.resolvedAt).toLocaleDateString("en-GB", {
+        resolvedAt: ticket.resolvedAt ? new Date(ticket.resolvedAt).toLocaleDateString("en-GB", {
           day: "2-digit",
           month: "short",
           year: "numeric"
@@ -607,7 +608,24 @@ export class TicketingService {
   }
 
   async markCommentAsRead(ticketId: number, userId: string) {
-    const ticket = await this.ticketRepo.findOneOrFail({ id: ticketId }, { populate: ['comments', 'comments.author'] });
+    const [ticket, user] = await Promise.all([this.ticketRepo.findOneOrFail({ id: ticketId }, { populate: ['comments', 'comments.author'] }),
+    this.userRepo.findOneOrFail({ id: userId })]);
+    if (user.role === UserRole.it) {
+      const unReadComments = ticket.comments.getItems().filter((comment) => comment.author.id === ticket.createdBy.id && comment.userRead === false);
+      if (unReadComments.length === 0) return ({
+        message: 'Comment read marked.',
+        read: 0 as const,
+        status: 200 as const
+      });
+      unReadComments.map((comment) => wrap(comment).assign({ userRead: true }));
+      await this.em.flush();
+      return ({
+        message: 'Comment read marked.',
+        read: 1 as const,
+        status: 200 as const
+      });
+    }
+
     if (ticket.createdBy.id != userId) {
       throw new BadRequestException("Invalid Request.");
     }
